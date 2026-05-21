@@ -22,11 +22,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import java.util.ArrayList
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var db: OfflineDb
-    private lateinit var webView: WebView
+    lateinit var webView: WebView
     private var locationManager: LocationManager? = null
     
     private var isTracking = false
@@ -101,7 +102,21 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+private fun configureWebViewCache() {
+    File(applicationContext.cacheDir, "webview_cache").let {
+        if (!it.exists()) it.mkdirs()
+    }
 
+    webView.settings.apply {
+        domStorageEnabled = true
+    }
+
+    CookieManager.getInstance().run {
+        setAcceptThirdPartyCookies(webView, true)
+        acceptCookie()
+        flush()
+    }
+}
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -123,7 +138,6 @@ class MainActivity : AppCompatActivity() {
         webView = WebView(this).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
-            settings.databaseEnabled = true
             settings.setGeolocationEnabled(true)
             
             // Allow files and storage uploads inside WebView
@@ -213,7 +227,7 @@ class MainActivity : AppCompatActivity() {
         webView.loadUrl("https://neo.qsoftware.biz/crm/")
     }
 
-    private fun isNetworkAvailable(): Boolean {
+    fun isNetworkAvailable(): Boolean {
         val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val network = cm.activeNetwork ?: return false
         val cap = cm.getNetworkCapabilities(network) ?: return false
@@ -349,14 +363,14 @@ class MainActivity : AppCompatActivity() {
         @JavascriptInterface
         fun startTracking(intervalMs: Long) {
             activity.runOnUiThread {
-                activity.startGPSLogging(intervalMs)
+                activity.startTracking(intervalMs)
             }
         }
 
         @JavascriptInterface
         fun stopTracking() {
             activity.runOnUiThread {
-                activity.stopGPSLogging()
+                activity.stopTracking()
             }
         }
 
@@ -372,32 +386,14 @@ class MainActivity : AppCompatActivity() {
 
         @JavascriptInterface
         fun configureWebViewCache() {
-            val cm = activity.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-            val request = NetworkRequest.Builder()
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                .build()
-
-            cm.registerNetworkCallback(request, object : ConnectivityManager.NetworkCallback() {
-                override fun onAvailable(network: Network) {
-                    runOnUiThread {
-                        webView.settings.cacheMode = WebSettings.LOAD_DEFAULT
-                        webView.evaluateJavascript(
-                            "if (typeof onNetworkStatusChanged === 'function') { onNetworkStatusChanged(true); }",
-                            null
-                        )
-                    }
+            activity.runOnUiThread {
+                val connected = activity.isNetworkAvailable()
+                activity.webView.settings.cacheMode = if (connected) {
+                    WebSettings.LOAD_DEFAULT
+                } else {
+                    WebSettings.LOAD_CACHE_ELSE_NETWORK
                 }
-
-                override fun onLost(network: Network) {
-                    runOnUiThread {
-                        webView.settings.cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
-                        webView.evaluateJavascript(
-                            "if (typeof onNetworkStatusChanged === 'function') { onNetworkStatusChanged(false); }",
-                            null
-                        )
-                    }
-                }
-            })
+            }
         }
     }
 }
