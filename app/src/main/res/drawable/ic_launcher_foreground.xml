@@ -1,0 +1,56 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Círculo exterior completo (anillo) -->
+    <path
+        android:pathData="
+            M24,54
+            A30,30 0 0 1 54,24
+            A30,30 0 0 1 84,54
+            A30,30 0 0 1 54,84
+            A30,30 0 0 1 24,54
+            Z
+
+            M54,54
+            m-18,0
+            a18,18 0 1 0 36,0
+            a18,18 0 1 0 -36,0
+            Z
+        "
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd" />
+
+    <!-- Círculo interior (agujero) -->
+    <path
+        android:pathData="
+            M24,54
+            A30,30 0 0 1 54,24
+            A30,30 0 0 1 84,54
+            A30,30 0 0 1 54,84
+            A30,30 0 0 1 24,54
+            Z
+
+            M54,54
+            m-18,0
+            a18,18 0 1 0 36,0
+            a18,18 0 1 0 -36,0
+            Z
+        "
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd" />
+
+    <!-- Signo + blanco, en posición superior (cuarto inferior derecho) -->
+    <path
+        android:pathData="
+            M57,75 H83
+            M70,85 V65
+        "
+        android:strokeWidth="12"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeColor="#FFFFFF" />
+
+</vector>
