@@ -1,4 +1,4 @@
-package com.qsoftware.qmedic.ui.theme
+package com.qsoftware.qcrm.ui.theme
 
 import android.app.Activity
 import android.os.Build
@@ -34,7 +34,7 @@ private val LightColorScheme = lightColorScheme(
 )
 
 @Composable
-fun QMedicTheme(
+fun QBusinessCRMTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,

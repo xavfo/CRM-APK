@@ -1,4 +1,4 @@
-package com.qsoftware.qmedic
+package com.qsoftware.qcrm
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -42,7 +42,7 @@ class MainActivity : AppCompatActivity() {
     private val fileChooserLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        val data = if (result.resultCode == Activity.RESULT_OK) result.data else null
+        val data = if (result.resultCode == RESULT_OK) result.data else null
         val results = WebChromeClient.FileChooserParams.parseResult(result.resultCode, data)
         fileUploadCallback?.onReceiveValue(results)
         fileUploadCallback = null
@@ -121,7 +121,7 @@ private fun configureWebViewCache() {
         super.onCreate(savedInstanceState)
 
         db = OfflineDb(this)
-        locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
 
         // Modern back button and gesture navigation support
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -215,7 +215,7 @@ private fun configureWebViewCache() {
         }
 
         // Register Network Callback to dynamically toggle cache and notify webpage
-        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
         val request = NetworkRequest.Builder()
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
@@ -228,7 +228,7 @@ private fun configureWebViewCache() {
     }
 
     fun isNetworkAvailable(): Boolean {
-        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
         val network = cm.activeNetwork ?: return false
         val cap = cm.getNetworkCapabilities(network) ?: return false
         return cap.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
@@ -313,7 +313,7 @@ private fun configureWebViewCache() {
     }
 
     override fun onDestroy() {
-        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
         cm.unregisterNetworkCallback(networkCallback)
         locationManager?.removeUpdates(locationListener)
         super.onDestroy()
@@ -326,7 +326,7 @@ private fun configureWebViewCache() {
     ) {
         @JavascriptInterface
         fun isOnline(): Boolean {
-            val cm = activity.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            val cm = activity.getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
             val network = cm.activeNetwork ?: return false
             val cap = cm.getNetworkCapabilities(network) ?: return false
             return cap.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)

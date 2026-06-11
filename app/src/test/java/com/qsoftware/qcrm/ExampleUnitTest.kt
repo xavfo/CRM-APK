@@ -1,4 +1,4 @@
-package com.qsoftware.qmedic
+package com.qsoftware.qcrm
 
 import org.junit.Test
 

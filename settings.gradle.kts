@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "QMedic"
+rootProject.name = "QCRM"
 include(":app")

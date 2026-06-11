@@ -1,4 +1,4 @@
-package com.qsoftware.qmedic
+package com.qsoftware.qcrm
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase

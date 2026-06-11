@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.qsoftware.qmedic"
+    namespace = "com.qsoftware.qcrm"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.qsoftware.qmedic"
+        applicationId = "com.qsoftware.qcrm"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
@@ -25,6 +25,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {

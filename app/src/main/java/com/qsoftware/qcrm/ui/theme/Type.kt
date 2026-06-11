@@ -1,4 +1,4 @@
-package com.qsoftware.qmedic.ui.theme
+package com.qsoftware.qcrm.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
