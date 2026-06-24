@@ -4,7 +4,7 @@
     <selectionStates>
       <SelectionState runConfigName="QBusinessCRM">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-05-21T17:04:10.812608100Z">
+        <DropdownSelection timestamp="2026-06-23T02:12:16.141246200Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\Xavier\.android\avd\Medium_Phone.avd" />
