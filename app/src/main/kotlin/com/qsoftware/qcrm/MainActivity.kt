@@ -17,6 +17,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Looper
+import android.widget.Toast
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.widget.FrameLayout
@@ -90,17 +91,23 @@ class MainActivity : AppCompatActivity() {
         override fun onAvailable(network: Network) {
             runOnUiThread {
                 webView.settings.cacheMode = WebSettings.LOAD_DEFAULT
+                // Show native toast notification
+                Toast.makeText(this@MainActivity, "Conexión restaurada", Toast.LENGTH_SHORT).show()
                 // Notify the web application when connection is restored
                 webView.evaluateJavascript(
                     "if (typeof onNetworkStatusChanged === 'function') { onNetworkStatusChanged(true); }",
                     null
                 )
+                // Trigger sync for any pending offline data
+                triggerOfflineSync()
             }
         }
 
         override fun onLost(network: Network) {
             runOnUiThread {
                 webView.settings.cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
+                // Show native toast notification
+                Toast.makeText(this@MainActivity, "Sin conexión - Modo offline", Toast.LENGTH_LONG).show()
                 // Notify the web application when connection is lost
                 webView.evaluateJavascript(
                     "if (typeof onNetworkStatusChanged === 'function') { onNetworkStatusChanged(false); }",
@@ -360,6 +367,17 @@ private fun configureWebViewCache() {
         locationManager?.removeUpdates(locationListener)
     }
 
+    /**
+     * Triggers synchronization of offline data when connection is restored.
+     * Notifies the web app via JavaScript to handle sync of cached data.
+     */
+    private fun triggerOfflineSync() {
+        webView.evaluateJavascript(
+            "if (typeof onSyncTriggered === 'function') { onSyncTriggered(); }",
+            null
+        )
+    }
+
     override fun onDestroy() {
         val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
         cm.unregisterNetworkCallback(networkCallback)
@@ -442,6 +460,69 @@ private fun configureWebViewCache() {
                     WebSettings.LOAD_CACHE_ELSE_NETWORK
                 }
             }
+        }
+
+        /**
+         * Triggers manual sync from JavaScript. Use this when the web app
+         * wants to explicitly sync all pending offline data.
+         */
+        @JavascriptInterface
+        fun triggerSync() {
+            activity.runOnUiThread {
+                activity.triggerOfflineSync()
+            }
+        }
+
+        /**
+         * Returns whether there is pending data to sync.
+         */
+        @JavascriptInterface
+        fun hasPendingSync(): Boolean {
+            return db.getPendingSyncCount() > 0
+        }
+
+        /**
+         * Get count of pending sync items
+         */
+        @JavascriptInterface
+        fun getPendingSyncCount(): Int {
+            return db.getPendingSyncCount()
+        }
+
+        /**
+         * Queue data for sync when back online
+         */
+        @JavascriptInterface
+        fun queueForSync(action: String, key: String, data: String) {
+            db.queueForSync(action, key, data)
+        }
+
+        /**
+         * Get all pending sync items as JSON array
+         */
+        @JavascriptInterface
+        fun getPendingSyncItems(): String {
+            val items = db.getPendingSyncItems()
+            val list = items.map { item ->
+                """{"id":${item.id},"action":"${item.action}","key":"${item.key}","data":${item.data},"timestamp":${item.timestamp}}"""
+            }
+            return "[${list.joinToString(",")}]"
+        }
+
+        /**
+         * Mark sync item as completed
+         */
+        @JavascriptInterface
+        fun markSynced(id: Long) {
+            db.markSynced(id)
+        }
+
+        /**
+         * Mark all sync items as completed
+         */
+        @JavascriptInterface
+        fun markAllSynced() {
+            db.markAllSynced()
         }
     }
 }
