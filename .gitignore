@@ -9,7 +9,44 @@
 /.idea/assetWizardSettings.xml
 .DS_Store
 /build
+/app/build
+!/app/build/outputs/apk/debug/
 /captures
 .externalNativeBuild
 .cxx
 local.properties
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Android Studio
+*.apk
+!app/build/outputs/apk/debug/*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+
+# Build intermediates
+*.log
+*.nav
+*.orig
+*.pb
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*~
+
+# Lint
+lint/intermediates/
+lint/generated/
+lint/outputs/
+lint/tmp/
+
+# Test results
+/test-results/
+/androidTest-results/
