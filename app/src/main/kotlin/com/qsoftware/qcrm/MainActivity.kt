@@ -185,6 +185,19 @@ private fun configureWebViewCache() {
                         loadUrl("file:///android_asset/offline.html")
                     }
                 }
+
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    // Inject offline queue management script into every loaded page
+                    try {
+                        val js = assets.open("offline-queue.js")
+                            .bufferedReader()
+                            .use { it.readText() }
+                        evaluateJavascript(js, null)
+                    } catch (e: Exception) {
+                        // offline-queue.js may not exist yet
+                    }
+                }
             }
 
             webChromeClient = object : WebChromeClient() {
@@ -390,6 +403,13 @@ private fun configureWebViewCache() {
         private val activity: MainActivity,
         private val db: OfflineDb
     ) {
+        @JavascriptInterface
+        fun showToast(message: String) {
+            activity.runOnUiThread {
+                Toast.makeText(activity, message, Toast.LENGTH_SHORT).show()
+            }
+        }
+
         @JavascriptInterface
         fun isOnline(): Boolean {
             val cm = activity.getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
