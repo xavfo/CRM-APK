@@ -7,13 +7,23 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <Button
+        android:id="@+id/confirmOfflineButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="24dp"
+        android:visibility="gone"
+        android:text="Confirmar ingreso offline" />
+
     <ScrollView
         android:id="@+id/formContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
         android:background="#CCFFFFFF"
-        android:padding="16dp">
+        android:padding="16dp"
+        android:visibility="gone">
 
         <LinearLayout
             android:id="@+id/formCard"
@@ -62,6 +72,14 @@
                 android:scaleType="centerCrop"
                 android:visibility="gone"
                 android:background="#EEEEEE"
+                android:layout_marginBottom="8dp" />
+
+            <EditText
+                android:id="@+id/gpsInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Ubicación GPS"
+                android:inputType="text"
                 android:layout_marginBottom="8dp" />
 
             <TextView

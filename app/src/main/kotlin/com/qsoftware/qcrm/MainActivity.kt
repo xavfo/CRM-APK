@@ -53,6 +53,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var descriptionInput: EditText
     private lateinit var capturePhotoButton: Button
     private lateinit var saveButton: Button
+    private lateinit var confirmOfflineButton: Button
+    private lateinit var gpsInput: EditText
     private lateinit var locationStatusText: TextView
     private lateinit var statusText: TextView
     private lateinit var photoPreview: ImageView
@@ -61,6 +63,9 @@ class MainActivity : AppCompatActivity() {
     private var isTracking = false
     private var trackingIntervalMs = 300000L
     private var lastKnownLocation: Location? = null
+    private var offlineFormConfirmed = false
+    private var credentialsEntered = false
+    private var formSavedWhileOffline = false
     private var currentPhotoFile: File? = null
     private var currentPhotoUri: Uri? = null
 
@@ -137,7 +142,16 @@ class MainActivity : AppCompatActivity() {
         override fun onAvailable(network: Network) {
             runOnUiThread {
                 webView.settings.cacheMode = WebSettings.LOAD_DEFAULT
-                Toast.makeText(this@MainActivity, "Conexión restaurada", Toast.LENGTH_SHORT).show()
+                if (offlineFormConfirmed) {
+                    formContainer.visibility = View.VISIBLE
+                    if (formSavedWhileOffline) {
+                        statusText.text = "Registro ingresado correctamente y listo para sincronizar"
+                        Toast.makeText(this@MainActivity, "Registro ingresado correctamente", Toast.LENGTH_SHORT).show()
+                        formSavedWhileOffline = false
+                    } else {
+                        statusText.text = "Conexión restaurada. El formulario sigue disponible"
+                    }
+                }
                 webView.evaluateJavascript(
                     "if (typeof onNetworkStatusChanged === 'function') { onNetworkStatusChanged(true); }",
                     null
@@ -149,6 +163,10 @@ class MainActivity : AppCompatActivity() {
         override fun onLost(network: Network) {
             runOnUiThread {
                 webView.settings.cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
+                if (!offlineFormConfirmed && credentialsEntered) {
+                    statusText.text = "Sin conexión. Confirme el ingreso offline para continuar"
+                }
+                showOfflinePromptIfNeeded()
                 Toast.makeText(this@MainActivity, "Sin conexión - Modo offline", Toast.LENGTH_LONG).show()
                 webView.evaluateJavascript(
                     "if (typeof onNetworkStatusChanged === 'function') { onNetworkStatusChanged(false); }",
@@ -171,6 +189,8 @@ class MainActivity : AppCompatActivity() {
         descriptionInput = findViewById(R.id.descriptionInput)
         capturePhotoButton = findViewById(R.id.capturePhotoButton)
         saveButton = findViewById(R.id.saveButton)
+        confirmOfflineButton = findViewById(R.id.confirmOfflineButton)
+        gpsInput = findViewById(R.id.gpsInput)
         locationStatusText = findViewById(R.id.locationStatusText)
         statusText = findViewById(R.id.statusText)
         photoPreview = findViewById(R.id.photoPreview)
@@ -191,6 +211,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         saveButton.setOnClickListener { savePendingForm() }
+        confirmOfflineButton.setOnClickListener { confirmOfflineEntry() }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -307,6 +328,7 @@ class MainActivity : AppCompatActivity() {
 
         webView.loadUrl("https://neo.qsoftware.biz/crm/")
         updateLocationStatus()
+        showOfflinePromptIfNeeded()
     }
 
     fun isNetworkAvailable(): Boolean {
@@ -352,12 +374,34 @@ class MainActivity : AppCompatActivity() {
     private fun updateLocationStatus() {
         val loc = lastKnownLocation ?: getFreshLocation()
         if (loc != null) {
-            locationStatusText.text = "GPS listo: ${loc.latitude}, ${loc.longitude} (±${loc.accuracy} m)"
+            val formatted = "${loc.latitude}, ${loc.longitude}"
+            locationStatusText.text = "GPS listo: $formatted (±${loc.accuracy} m)"
+            if (gpsInput.text.isNullOrBlank() || gpsInput.text.toString().startsWith("Obteniendo") || gpsInput.text.toString().startsWith("GPS")) {
+                gpsInput.setText(formatted)
+            }
         } else if (!hasLocationPermission()) {
             locationStatusText.text = "Permiso de ubicación pendiente"
         } else {
             locationStatusText.text = "Obteniendo ubicación..."
+            gpsInput.setText("Obteniendo ubicación...")
         }
+    }
+
+    private fun showOfflinePromptIfNeeded() {
+        val offline = !isNetworkAvailable()
+        confirmOfflineButton.visibility = if (offline && credentialsEntered && !offlineFormConfirmed) View.VISIBLE else View.GONE
+        if (offline && credentialsEntered && !offlineFormConfirmed) {
+            statusText.text = "Sin conexión detectada. Confirme el ingreso offline para continuar"
+        }
+    }
+
+    private fun confirmOfflineEntry() {
+        offlineFormConfirmed = true
+        formContainer.visibility = View.VISIBLE
+        confirmOfflineButton.visibility = View.GONE
+        updateLocationStatus()
+        statusText.text = "Ingreso offline confirmado. Complete el registro y se guardará"
+        Toast.makeText(this, "Ingreso offline confirmado", Toast.LENGTH_SHORT).show()
     }
 
     private fun savePendingForm() {
@@ -368,10 +412,17 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        val gpsValue = gpsInput.text.toString().trim()
+        if (gpsValue.isEmpty()) {
+            statusText.text = "La ubicación GPS es obligatoria"
+            return
+        }
+
         val location = lastKnownLocation ?: getFreshLocation()
         val payload = JSONObject().apply {
             put("title", title)
             put("description", description)
+            put("gpsValue", gpsValue)
             put("photoPath", currentPhotoFile?.absolutePath ?: "")
             put("latitude", location?.latitude ?: 0.0)
             put("longitude", location?.longitude ?: 0.0)
@@ -388,11 +439,13 @@ class MainActivity : AppCompatActivity() {
             createdAt = System.currentTimeMillis()
         )
 
+        formSavedWhileOffline = !isNetworkAvailable()
         statusText.text = if (isNetworkAvailable()) {
             "Registro guardado y sincronizado"
         } else {
             "Registro guardado offline. Se sincronizará cuando haya conexión"
         }
+        formContainer.visibility = View.VISIBLE
         Toast.makeText(this, statusText.text, Toast.LENGTH_LONG).show()
         if (isNetworkAvailable()) {
             syncPendingForms()
@@ -530,6 +583,14 @@ class MainActivity : AppCompatActivity() {
         fun requestLocationPermission() {
             activity.runOnUiThread {
                 activity.requestLocationPermissionsNatively()
+            }
+        }
+
+        @JavascriptInterface
+        fun onCredentialsEntered(entered: Boolean) {
+            activity.runOnUiThread {
+                activity.credentialsEntered = entered
+                activity.showOfflinePromptIfNeeded()
             }
         }
 
