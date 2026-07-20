@@ -13,13 +13,14 @@
 La aplicación puede funcionar sin conexión a Internet. Cuando el dispositivo se desconecta:
 
 1. Las páginas ya visitadas se cargan desde la **caché local**
-2. Los formularios que se envíen (crear Tareas, Leads, etc.) se guardan **automáticamente** en una cola local
-3. Aparece un **círculo rojo con un número** en la esquina superior derecha indicando cuántos registros están pendientes de sincronizar
+2. Los **desplegables y listas** (Producto, Categoría, Usuario Asignado, etc.) funcionan con datos cacheados de la última visita online
+3. Los formularios que se envían (crear Tareas, Leads, etc.) se guardan **automáticamente** en una cola local y el formulario se cierra normalmente
+4. Aparece un **círculo rojo con un número** en la esquina superior derecha indicando cuántos registros están pendientes de sincronizar
 
 Cuando la conexión se restablece:
 
-1. La aplicación lo nota automáticamente
-2. Los registros guardados se **sincronizan uno por uno** en orden
+1. La aplicación lo nota automáticamente (muestra "Conexión restaurada")
+2. Los registros guardados se **sincronizan uno por uno** en orden, mostrando progreso
 3. Aparecerá un mensaje "Sincronización completada" cuando terminen todos
 
 ### 2.2 Llenado automático de GPS
@@ -96,16 +97,24 @@ El CRM web puede usar estas funciones desde la consola o desde su propio código
 
 ## 5. Solución de problemas
 
-### "No hay conexión" en modo offline
+### Los desplegables (Producto, Usuario, etc.) no abren en modo offline
 
-- Asegúrate de haber visitado la página **estando conectado** al menos una vez
-- La caché solo guarda páginas previamente cargadas
+- Debes haber visitado la página **estando conectado** al menos una vez para que los datos se almacenen en caché
+- La caché se llena automáticamente mientras navegas online
+- Si nunca has abierto ese desplegable online, no tendrá datos en caché
+
+### "Guardando..." se queda congelado
+
+- Esto ocurre si la versión anterior del script interceptaba la petición incorrectamente
+- La versión actual devuelve una **respuesta simulada con ID** para que EspoCRM libere la interfaz
+- El registro queda guardado en la cola local y se sincronizará cuando haya conexión
 
 ### GPS no se llena automáticamente
 
 - Concede el permiso de ubicación cuando el sistema lo solicite
 - Activa el GPS en el dispositivo
 - Espera unos segundos a que el GPS obtenga una ubicación
+- Los campos deben llamarse `latitude`, `longitude`, `gps`, `location` o similares
 
 ### La sincronización no se completa
 

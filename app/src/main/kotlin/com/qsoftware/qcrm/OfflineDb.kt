@@ -5,18 +5,18 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
 class OfflineDb(ctx: Context) :
-    SQLiteOpenHelper(ctx, "offline.db", null, 3) {
+    SQLiteOpenHelper(ctx, "offline.db", null, 4) {
 
     companion object {
         const val TABLE_CACHE = "cache"
         const val TABLE_GPS_LOGS = "gps_logs"
         const val TABLE_SYNC_QUEUE = "sync_queue"
+        const val TABLE_FORM_ENTRIES = "form_entries"
     }
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE cache(k TEXT PRIMARY KEY, v TEXT)")
         db.execSQL("CREATE TABLE gps_logs(id INTEGER PRIMARY KEY AUTOINCREMENT, latitude REAL, longitude REAL, accuracy REAL, timestamp INTEGER)")
-        // Queue table for pending sync operations
         db.execSQL("""
             CREATE TABLE sync_queue(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,8 +27,21 @@ class OfflineDb(ctx: Context) :
                 synced INTEGER DEFAULT 0
             )
         """.trimIndent())
+        db.execSQL("""
+            CREATE TABLE form_entries(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                payload TEXT NOT NULL,
+                photo_path TEXT,
+                latitude REAL,
+                longitude REAL,
+                accuracy REAL,
+                created_at INTEGER NOT NULL,
+                synced INTEGER DEFAULT 0,
+                sync_message TEXT
+            )
+        """.trimIndent())
     }
-    
+
     override fun onUpgrade(db: SQLiteDatabase, old: Int, new: Int) {
         if (old < 2) {
             db.execSQL("CREATE TABLE IF NOT EXISTS gps_logs(id INTEGER PRIMARY KEY AUTOINCREMENT, latitude REAL, longitude REAL, accuracy REAL, timestamp INTEGER)")
@@ -45,6 +58,21 @@ class OfflineDb(ctx: Context) :
                 )
             """.trimIndent())
         }
+        if (old < 4) {
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS form_entries(
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    payload TEXT NOT NULL,
+                    photo_path TEXT,
+                    latitude REAL,
+                    longitude REAL,
+                    accuracy REAL,
+                    created_at INTEGER NOT NULL,
+                    synced INTEGER DEFAULT 0,
+                    sync_message TEXT
+                )
+            """.trimIndent())
+        }
     }
 
     fun insert(k: String, v: String) = writableDatabase.execSQL(
@@ -55,9 +83,6 @@ class OfflineDb(ctx: Context) :
         "SELECT v FROM cache WHERE k=?", arrayOf(k)
     ).use { if (it.moveToFirst()) it.getString(0) else null }
 
-    /**
-     * Get all cache keys (for sync purposes)
-     */
     fun getAllKeys(): List<String> {
         val keys = ArrayList<String>()
         readableDatabase.rawQuery("SELECT k FROM cache", null).use { cursor ->
@@ -68,9 +93,6 @@ class OfflineDb(ctx: Context) :
         return keys
     }
 
-    /**
-     * Queue an action for sync when back online
-     */
     fun queueForSync(action: String, key: String, data: String) {
         writableDatabase.execSQL(
             "INSERT INTO sync_queue(action, key, data, timestamp, synced) VALUES(?,?,?,?,0)",
@@ -78,9 +100,6 @@ class OfflineDb(ctx: Context) :
         )
     }
 
-    /**
-     * Get all pending sync items
-     */
     fun getPendingSyncItems(): List<SyncItem> {
         val items = ArrayList<SyncItem>()
         readableDatabase.rawQuery(
@@ -100,28 +119,61 @@ class OfflineDb(ctx: Context) :
         return items
     }
 
-    /**
-     * Mark sync item as completed
-     */
     fun markSynced(id: Long) {
         writableDatabase.execSQL("UPDATE sync_queue SET synced=1 WHERE id=?", arrayOf(id))
     }
 
-    /**
-     * Mark all sync items as completed
-     */
     fun markAllSynced() {
         writableDatabase.execSQL("UPDATE sync_queue SET synced=1 WHERE synced=0")
     }
 
-    /**
-     * Get count of pending sync items
-     */
     fun getPendingSyncCount(): Int {
         readableDatabase.rawQuery("SELECT COUNT(*) FROM sync_queue WHERE synced=0", null).use { cursor ->
             if (cursor.moveToFirst()) return cursor.getInt(0)
         }
         return 0
+    }
+
+    fun insertPendingForm(
+        payload: String,
+        photoPath: String?,
+        latitude: Double?,
+        longitude: Double?,
+        accuracy: Double?,
+        createdAt: Long
+    ) {
+        writableDatabase.execSQL(
+            "INSERT INTO form_entries(payload, photo_path, latitude, longitude, accuracy, created_at, synced, sync_message) VALUES(?,?,?,?,?,?,0,?)",
+            arrayOf(payload, photoPath, latitude, longitude, accuracy, createdAt, "pendiente")
+        )
+    }
+
+    fun getPendingForms(): List<FormEntry> {
+        val entries = ArrayList<FormEntry>()
+        readableDatabase.rawQuery(
+            "SELECT id, payload, photo_path, latitude, longitude, accuracy, created_at, synced FROM form_entries WHERE synced=0 ORDER BY created_at ASC",
+            null
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                entries.add(
+                    FormEntry(
+                        id = cursor.getLong(0),
+                        payload = cursor.getString(1),
+                        photoPath = cursor.getString(2),
+                        latitude = cursor.getDouble(3),
+                        longitude = cursor.getDouble(4),
+                        accuracy = cursor.getDouble(5),
+                        createdAt = cursor.getLong(6),
+                        synced = cursor.getInt(7)
+                    )
+                )
+            }
+        }
+        return entries
+    }
+
+    fun markPendingFormSynced(id: Long) {
+        writableDatabase.execSQL("UPDATE form_entries SET synced=1, sync_message='sincronizado' WHERE id=?", arrayOf(id))
     }
 
     fun logGPS(latitude: Double, longitude: Double, accuracy: Float, timestamp: Long) = writableDatabase.execSQL(
@@ -151,5 +203,16 @@ class OfflineDb(ctx: Context) :
         val key: String,
         val data: String,
         val timestamp: Long
+    )
+
+    data class FormEntry(
+        val id: Long,
+        val payload: String,
+        val photoPath: String?,
+        val latitude: Double,
+        val longitude: Double,
+        val accuracy: Double,
+        val createdAt: Long,
+        val synced: Int
     )
 }
